@@ -12,8 +12,9 @@ Function:
 '''
 import os
 import sys
+import ipaddress
 from pathlib import Path
-from flask import Flask, request, jsonify, send_file, render_template, send_from_directory
+from flask import Flask, request, jsonify, send_file, render_template, send_from_directory, abort
 from flask_cors import CORS
 
 # 导入公共 API 处理模块
@@ -28,6 +29,48 @@ from musicdl.modules import MusicClientBuilder
 
 app = Flask(__name__, static_folder='static', static_url_path='/static')
 CORS(app)
+
+# ======================== 本地网络访问限制 ========================
+
+# 额外允许的 IP 白名单（通过 --allow-ip 参数或 ALLOWED_IPS 环境变量添加）
+_extra_allowed_ips: list[ipaddress.IPv4Network | ipaddress.IPv6Network] = []
+# 是否启用本地网络限制
+_local_only = False
+
+
+def _is_allowed_ip(remote_ip: str) -> bool:
+    """判断请求 IP 是否在允许的网络范围内
+    
+    内置放行规则：
+    - 127.0.0.0/8 (localhost)
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+    - ::1 (IPv6 localhost)
+    - fe80::/10 (IPv6 链路本地)
+    """
+    try:
+        addr = ipaddress.ip_address(remote_ip)
+    except ValueError:
+        return False
+    # 检查是否为私有地址或回环地址（涵盖 127.*, 10.*, 172.16-31.*, 192.168.*）
+    if addr.is_private or addr.is_loopback:
+        return True
+    # 检查额外白名单
+    for net in _extra_allowed_ips:
+        if addr in net:
+            return True
+    return False
+
+
+@app.before_request
+def _check_local_access():
+    """在每个请求前检查来源 IP 是否被允许"""
+    if not _local_only:
+        return None
+    remote_ip = request.remote_addr
+    if not _is_allowed_ip(remote_ip):
+        abort(403, description=f'Access denied: {remote_ip} is not in the allowed network range')
 
 # ======================== 辅助函数 ========================
 
@@ -179,8 +222,27 @@ if __name__ == '__main__':
     parser.add_argument('--port', type=int, default=8866, help='监听端口 (默认: 8866)')
     parser.add_argument('--debug', action='store_true', help='开启调试模式')
     parser.add_argument('--work-dir', default=os.environ.get('MUSICDL_WORK_DIR', '.'), help='服务工作目录 (默认: 环境变量 MUSICDL_WORK_DIR 或当前目录)')
+    parser.add_argument('--local-only', action='store_true',
+                        default=os.environ.get('LOCAL_ONLY', '').lower() in ('1', 'true', 'yes'),
+                        help='仅允许本地/内网 IP 访问 (默认: 环境变量 LOCAL_ONLY 或关闭)')
+    parser.add_argument('--allow-ip', action='append', default=None,
+                        help='额外允许的 IP 或 CIDR (可多次指定，也可通过环境变量 ALLOWED_IPS 逗号分隔设置)')
     args = parser.parse_args()
     api_handler.set_work_dir(args.work_dir)
+
+    # 设置本地网络访问限制
+    _local_only = args.local_only
+    # 合并命令行 --allow-ip 和环境变量 ALLOWED_IPS
+    extra_ips = list(args.allow_ip or [])
+    env_ips = os.environ.get('ALLOWED_IPS', '').strip()
+    if env_ips:
+        extra_ips.extend([ip.strip() for ip in env_ips.split(',') if ip.strip()])
+    for ip_str in extra_ips:
+        try:
+            # 支持单个 IP (如 192.168.2.10) 和 CIDR (如 99.137.0.0/16)
+            _extra_allowed_ips.append(ipaddress.ip_network(ip_str, strict=False))
+        except ValueError:
+            print(f'⚠ 忽略无效的 IP/CIDR: {ip_str}')
     print(f'''
 ╔══════════════════════════════════════════════════════╗
 ║           musicdl HTTP 服务启动                       ║
@@ -192,6 +254,8 @@ if __name__ == '__main__':
 ║  工作目录: {args.work_dir:<40s}  ║
 ║  音乐输出: {os.path.join(args.work_dir, 'musicdl_outputs'):<40s}  ║
 ║  已注册音乐源: {len(MusicClientBuilder.REGISTERED_MODULES)} 个                            ║
+║  本地网络限制: {'✅ 已启用' if _local_only else '❌ 未启用':<39s}  ║
+║  额外白名单: {', '.join(str(n) for n in _extra_allowed_ips) if _extra_allowed_ips else '无':<41s}  ║
 ╚══════════════════════════════════════════════════════╝
     ''')
     app.run(host=args.host, port=args.port, debug=args.debug, threaded=True)

@@ -1,20 +1,19 @@
 version: '3.8'
 
 services:
-  musicdl-web:
-    build:
-      context: .                               # 构建上下文为项目根目录
-      dockerfile: http_server/Dockerfile
-    image: musicdl-web:latest
-    container_name: musicdl-web
+  musicdl-panel:
+    image: ghcr.io/hellowzsg/musicdl-web:v1.0.0
+    container_name: musicdl-panel
     ports:
-      - "${SERVER_PORT:-8866}:${SERVER_PORT:-8866}"
+      - "${SERVER_PORT:-58866}:${SERVER_PORT:-8866}"
     volumes:
       - ./workdir:/app/workdir                 # 持久化下载文件和任务记录
     environment:
-      - SERVER_HOST=0.0.0.0                    # 监听地址
+      - SERVER_HOST=127.0.0.1                    # 监听地址
       - SERVER_PORT=8866                       # 监听端口
       - SERVER_DEBUG=                          # 调试模式（设为 --debug 开启，留空关闭）
       - MUSICDL_WORK_DIR=/app/workdir          # 工作目录
+      - LOCAL_ONLY=                            # 本地网络限制（设为 true 开启，留空关闭）
+      - ALLOWED_IPS=                           # 额外允许的 IP 白名单（逗号分隔，如: 192.168.2.10,203.0.113.0/24）
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
