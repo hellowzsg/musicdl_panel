@@ -2,14 +2,14 @@ version: '3.8'
 
 services:
   musicdl-panel:
-    image: ghcr.io/hellowzsg/musicdl-web:v1.0.0
+    image: ghcr.io/hellowzsg/musicdl-web:v1.0.1
     container_name: musicdl-panel
     ports:
-      - "${SERVER_PORT:-58866}:${SERVER_PORT:-8866}"
+      - "${SERVER_PORT:-58866}:8866"
     volumes:
       - ./workdir:/app/workdir                 # 持久化下载文件和任务记录
     environment:
-      - SERVER_HOST=127.0.0.1                    # 监听地址
+      - SERVER_HOST=0.0.0.0                      # 监听地址（容器内必须监听 0.0.0.0，否则端口映射无法转发）
       - SERVER_PORT=8866                       # 监听端口
       - SERVER_DEBUG=                          # 调试模式（设为 --debug 开启，留空关闭）
       - MUSICDL_WORK_DIR=/app/workdir          # 工作目录
