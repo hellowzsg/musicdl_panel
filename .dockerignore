@@ -1,0 +1,39 @@
+
+# Git
+.git
+.gitmodules
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python 缓存
+__pycache__
+*.py[cod]
+*.egg-info
+*.egg
+
+# Node
+http_server/frontend/node_modules
+
+# 运行时数据
+workdir
+
+# 已有的构建产物（Docker 内会重新构建）
+http_server/static/dist
+
+# 其他
+.codebuddy
+*.md
+musicdl/.github
+musicdl/.git
+musicdl/docs
+musicdl/examples
+musicdl/scripts

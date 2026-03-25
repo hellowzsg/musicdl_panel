@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  musicdl-web:
+    build:
+      context: .                               # 构建上下文为项目根目录
+      dockerfile: http_server/Dockerfile
+    image: musicdl-web:latest
+    container_name: musicdl-web
+    ports:
+      - "${SERVER_PORT:-8866}:${SERVER_PORT:-8866}"
+    volumes:
+      - ./workdir:/app/workdir                 # 持久化下载文件和任务记录
+    environment:
+      - SERVER_HOST=0.0.0.0                    # 监听地址
+      - SERVER_PORT=8866                       # 监听端口
+      - SERVER_DEBUG=                          # 调试模式（设为 --debug 开启，留空关闭）
+      - MUSICDL_WORK_DIR=/app/workdir          # 工作目录
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
