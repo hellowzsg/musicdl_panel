@@ -40,25 +40,14 @@ music/
 ### 方式一：Docker Compose（推荐）
 
 ```bash
-# 克隆项目（含 submodule）
-git clone --recursive https://github.com/hellowzsg/musicdl-web.git
-cd musicdl-web
+wget https://raw.githubusercontent.com/hellowzsg/musicdl_panel/refs/heads/master/docker-compose.yaml
 
 # 一键启动
 docker compose up -d
 
 # 访问 http://localhost:58866
-```
 
-### 方式二：拉取预构建镜像
-
-```bash
-# 直接使用 docker-compose.yaml
-docker compose up -d
-# 默认拉取 ghcr.io/hellowzsg/musicdl-web:v1.0.1
-```
-
-### 方式三：本地开发运行
+### 方式二：本地开发运行
 
 ```bash
 # 初始化 submodule
