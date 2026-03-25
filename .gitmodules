@@ -1,4 +1,4 @@
 [submodule "musicdl"]
 	path = musicdl
-	url = https://github.com/hellowzsg/musicdl.git
+	url = git@github.com:hellowzsg/musicdl.git
 	branch = master
