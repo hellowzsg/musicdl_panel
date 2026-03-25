@@ -1,5 +1,5 @@
 
-# 🎵 MusicDL Web
+# 🎵 MusicDL Panel
 
 一站式音乐搜索与下载的 Web 服务，基于 [musicdl](https://github.com/hellowzsg/musicdl) 核心库构建，提供美观的 Web 界面和完整的 RESTful API。
 
