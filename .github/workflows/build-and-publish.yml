@@ -18,7 +18,7 @@ on:
 env:
   REGISTRY: ghcr.io
   # 镜像名称会自动转为小写（GitHub 要求）
-  IMAGE_NAME: ${{ github.repository_owner }}/musicdl-web
+  IMAGE_NAME: ${{ github.repository_owner }}/musicdl-panel
 
 jobs:
   build-and-push:

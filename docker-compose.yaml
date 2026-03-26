@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   musicdl-panel:
-    image: ghcr.io/hellowzsg/musicdl-web:v1.0.1
+    image: ghcr.io/hellowzsg/musicdl-web:v1.0.2
     container_name: musicdl-panel
     ports:
       - "${SERVER_PORT:-58866}:8866"
