@@ -23,11 +23,11 @@ __pycache__
 # Node
 http_server/frontend/node_modules
 
+# 已有的构建产物（Docker 内会重新构建）
+http_server/static
+
 # 运行时数据
 workdir
-
-# 已有的构建产物（Docker 内会重新构建）
-http_server/static/dist
 
 # 其他
 .codebuddy

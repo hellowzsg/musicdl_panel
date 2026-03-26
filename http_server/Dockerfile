@@ -21,11 +21,11 @@ RUN npm run build
 
 
 # ============================================================
-# 阶段2: Python 运行环境
+# 阶段2: 编译 Python 依赖（含编译工具链，仅用于构建）
 # ============================================================
-FROM python:3.12-slim AS runtime
+FROM python:3.12-slim AS python-builder
 
-# 安装系统级依赖（部分 Python 包编译需要）
+# 安装编译所需的系统依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
@@ -36,20 +36,38 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# 先拷贝并安装 musicdl 核心库
+# 拷贝 musicdl 核心库
 COPY musicdl/ /app/musicdl/
 
-# 拷贝 http_server 的依赖文件并安装
+# 拷贝 http_server 的依赖文件
 COPY http_server/requirements.txt /app/http_server/requirements.txt
-RUN pip install --no-cache-dir -r /app/http_server/requirements.txt
 
-# 以可编辑模式安装 musicdl（使其可被 import）
-RUN cd /app/musicdl && pip install --no-cache-dir -e .
+# 将所有依赖安装到独立目录，方便后续拷贝
+RUN pip install --no-cache-dir --prefix=/install -r /app/http_server/requirements.txt \
+    && cd /app/musicdl && pip install --no-cache-dir --prefix=/install .
 
-# 拷贝 http_server 后端代码
-COPY http_server/server.py /app/http_server/
-COPY http_server/api_handler.py /app/http_server/
-COPY http_server/templates/ /app/http_server/templates/
+
+# ============================================================
+# 阶段3: 精简运行时镜像（不包含编译工具链）
+# ============================================================
+FROM python:3.12-slim AS runtime
+
+# 仅安装运行时需要的系统库（不安装 gcc/g++ 等编译工具）
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libffi8 \
+    libxml2 \
+    libxslt1.1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# 从构建阶段拷贝已编译好的 Python 依赖
+COPY --from=python-builder /install /usr/local
+
+# 拷贝 http_server 后端代码（整目录拷贝，新增文件无需修改 Dockerfile）
+# .dockerignore 已排除 node_modules 和 static，此处再清理阶段3不需要的内容
+COPY http_server/ /app/http_server/
+RUN rm -rf /app/http_server/frontend /app/http_server/Dockerfile /app/http_server/requirements.txt
 
 # 从第一阶段拷贝前端构建产物
 COPY --from=frontend-builder /build/static/dist/ /app/http_server/static/dist/
