@@ -49,9 +49,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # 4. 提取镜像元数据（标签、标注等）
-      - name: 提取镜像元数据
-        id: meta
+      # ============================================================
+      #  完整版镜像（full）
+      # ============================================================
+
+      # 4a. 提取完整版镜像元数据
+      - name: 提取完整版镜像元数据
+        id: meta-full
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
@@ -59,17 +63,47 @@ jobs:
             type=raw,value=${{ inputs.image_tag }}
             type=sha,prefix=,format=short
 
-      # 5. 构建并推送镜像
-      - name: 构建并推送 Docker 镜像
+      # 5a. 构建并推送完整版镜像
+      - name: 构建并推送完整版镜像
         uses: docker/build-push-action@v6
         with:
           context: .
           file: http_server/Dockerfile
           push: ${{ inputs.push_image }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: ${{ steps.meta-full.outputs.tags }}
+          labels: ${{ steps.meta-full.outputs.labels }}
+          cache-from: type=gha,scope=full
+          cache-to: type=gha,scope=full,mode=max
+
+      # ============================================================
+      #  精简版镜像（tiny）
+      # ============================================================
+
+      # 4b. 提取精简版镜像元数据
+      - name: 提取精简版镜像元数据
+        id: meta-tiny
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ inputs.image_tag }}-tiny
+            type=sha,prefix=,suffix=-tiny,format=short
+
+      # 5b. 构建并推送精简版镜像
+      - name: 构建并推送精简版镜像
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: http_server/Dockerfile.tiny
+          push: ${{ inputs.push_image }}
+          tags: ${{ steps.meta-tiny.outputs.tags }}
+          labels: ${{ steps.meta-tiny.outputs.labels }}
+          cache-from: type=gha,scope=tiny
+          cache-to: type=gha,scope=tiny,mode=max
+
+      # ============================================================
+      #  构建摘要
+      # ============================================================
 
       # 6. 输出镜像信息
       - name: 输出镜像信息
@@ -77,8 +111,15 @@ jobs:
           echo "### 🐳 镜像构建完成" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Registry:** ${{ env.REGISTRY }}" >> $GITHUB_STEP_SUMMARY
-          echo "**镜像标签:**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### 完整版（42 源，~460MB）" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta-full.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### 精简版（39 源，~149MB，无 YouTube/TIDAL/Apple）" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta-tiny.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "**是否推送:** ${{ inputs.push_image }}" >> $GITHUB_STEP_SUMMARY

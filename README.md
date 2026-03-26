@@ -46,8 +46,49 @@ wget https://raw.githubusercontent.com/hellowzsg/musicdl_panel/refs/heads/master
 docker compose up -d
 
 # 访问 http://localhost:58866
+```
 
-### 方式二：本地开发运行
+### 方式二：本地构建 Docker 镜像
+
+如果你想自行修改代码后构建镜像，或在无法拉取预构建镜像时使用：
+
+```bash
+# 1. 克隆代码（含 musicdl submodule）
+git clone --recurse-submodules https://github.com/hellowzsg/musicdl_panel.git
+cd musicdl_panel
+
+# 如果已克隆但 musicdl/ 目录为空，补拉 submodule
+git submodule update --init --recursive
+
+# 2. 构建镜像（在项目根目录执行，构建上下文必须为项目根目录）
+docker build -f http_server/Dockerfile -t musicdl-panel .
+
+# 3. 运行容器
+docker run -d \
+  --name musicdl-panel \
+  -p 8866:8866 \
+  -v ./workdir:/app/workdir \
+  musicdl-panel
+
+# 访问 http://localhost:8866
+```
+
+提供两个版本的 Dockerfile，可按需选择：
+
+| 版本 | Dockerfile | 镜像体积 | 音乐源 | 说明 |
+|------|-----------|---------|-------|------|
+| **完整版** | `http_server/Dockerfile` | ~460MB | 42 个 | 全部功能，含 TIDAL / Apple / YouTube 等所有源 |
+| **精简版** | `http_server/Dockerfile.tiny` | ~149MB | 39 个 | 移除 TIDAL / Apple Music / YouTube 及其重型依赖 |
+
+构建精简版：
+
+```bash
+docker build -f http_server/Dockerfile.tiny -t musicdl-panel:tiny .
+```
+
+> **精简版说明**：仅移除 YouTube、TIDAL、Apple Music 三个源及其专属依赖（av/PyAV、aigpy、nodejs-wheel、ytmusicapi、pywidevine），同时不再需要安装系统级的 ffmpeg 和 nodejs。其余 39 个源完整保留。缺少依赖的源在服务启动时自动跳过并输出警告，不影响其他源正常使用。
+
+### 方式三：本地开发运行
 
 ```bash
 # 初始化 submodule
